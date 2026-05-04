@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard UEH — Hospital San José</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --white:#ffffff;
+  --gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-300:#d1d5db;
+  --gray-400:#9ca3af;--gray-500:#6b7280;--gray-600:#4b5563;--gray-700:#374151;
+  --gray-800:#1f2937;--gray-900:#111827;
+  --blue:#1d4ed8;--blue-light:#dbeafe;--blue-dark:#1e40af;
+  --red:#b91c1c;--red-light:#fee2e2;--red-vivid:#dc2626;
+  --green:#15803d;--green-light:#dcfce7;
+  --amber:#b45309;--amber-light:#fef3c7;
+  --cyan:#0e7490;--cyan-light:#cffafe;
+  --purple:#7c3aed;--purple-light:#ede9fe;
+  --orange:#c2410c;--orange-light:#ffedd5;
+  --font-ui:'IBM Plex Sans',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --radius:6px;--radius-lg:10px;
+  --shadow:0 1px 3px rgba(0,0,0,.10),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.10),0 2px 4px -1px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-ui);font-size:14px;background:var(--gray-50);color:var(--gray-800);min-height:100vh;display:flex;flex-direction:column}
+/* ── HEADER ── */
+header{background:var(--white);border-bottom:1px solid var(--gray-200);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.header-title{display:flex;align-items:center;gap:10px}
+.header-title h1{font-size:16px;font-weight:700;color:var(--gray-900);line-height:1.2}
+.header-title small{font-size:11px;color:var(--gray-500);display:block;font-weight:400}
+.logo-pill{background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.5px}
+.spinner{width:18px;height:18px;border:2px solid var(--gray-200);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ── TABS ── */
+.tab-bar{background:var(--white);border-bottom:1px solid var(--gray-200);padding:0 20px;display:flex;gap:0}
+.tab-btn{padding:10px 18px;font-size:13px;font-weight:600;color:var(--gray-500);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-btn:hover:not(.active){color:var(--gray-700)}
+/* ── MAIN ── */
+main{flex:1;padding:16px 20px;max-width:1400px;width:100%;margin:0 auto}
+.tab-panel{display:none}.tab-panel.active{display:block}
+/* ── CAPTURE GRID ── */
+.capture-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.card{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow)}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray-500);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--gray-100)}
+/* textarea */
+textarea{width:100%;height:260px;border:1px solid var(--gray-300);border-radius:var(--radius);padding:10px;font-family:var(--font-mono);font-size:12px;resize:vertical;color:var(--gray-800);background:var(--gray-50);transition:border .2s}
+textarea:focus{outline:none;border-color:var(--blue);background:var(--white)}
+.btn-row{display:flex;gap:8px;margin-top:10px}
+.btn{padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:var(--font-ui)}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-dark)}
+.btn-primary:disabled{background:var(--gray-300);cursor:not-allowed}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#166534}
+.btn-success:disabled{background:var(--gray-300);cursor:not-allowed}
+.btn-outline-red{background:transparent;color:var(--red);border:1px solid var(--red)}.btn-outline-red:hover{background:var(--red-light)}
+/* extracted values */
+.ev-section{margin-bottom:14px}
+.ev-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-400);margin-bottom:6px}
+.ev-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.ev-item{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:6px 8px}
+.ev-label{font-size:10px;color:var(--gray-500);margin-bottom:2px}
+.ev-value{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--gray-900)}
+.ev-value.mono{font-size:12px}
+/* badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-green{background:var(--green-light);color:var(--green)}
+.badge-amber{background:var(--amber-light);color:var(--amber)}
+.badge-red{background:var(--red-light);color:var(--red)}
+.badge-orange{background:var(--orange-light);color:var(--orange)}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius-lg);border:1px solid var(--gray-200);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:12px;background:var(--white)}
+thead th{background:var(--gray-50);color:var(--gray-600);font-weight:600;text-align:left;padding:8px 10px;border-bottom:2px solid var(--gray-200);white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.3px}
+tbody tr{border-bottom:1px solid var(--gray-100);transition:background .1s}
+tbody tr:hover{background:var(--gray-50)}
+tbody tr.row-latest{background:var(--blue-light)!important}
+tbody tr.row-latest td{color:var(--blue-dark)}
+td{padding:7px 10px;white-space:nowrap;vertical-align:middle}
+.mono{font-family:var(--font-mono)}
+.btn-del{background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:14px;padding:2px 4px;border-radius:3px;transition:color .1s}
+.btn-del:hover{color:var(--red)}
+/* ── CHARTS ── */
+.chart-filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--gray-300);background:var(--white);color:var(--gray-600);transition:all .15s}
+.filter-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.charts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+.chart-full{grid-column:1/-1}
+.chart-card{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow)}
+.chart-card h3{font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.chart-wrap{position:relative;height:180px}
+.chart-wrap-lg{position:relative;height:220px}
+/* ── FOOTER ── */
+footer{background:var(--white);border-top:1px solid var(--gray-200);padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+footer small{color:var(--gray-400);font-size:11px}
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:40px;color:var(--gray-400);font-size:13px}
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .capture-grid{grid-template-columns:1fr}
+  .charts-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+  header{padding:10px 12px}
+  main{padding:12px}
+  .tab-btn{padding:8px 12px;font-size:12px}
+  .charts-grid{grid-template-columns:1fr}
+  .ev-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-title">
+    <div class="logo-pill">UEH</div>
+    <div>
+      <h1>Dashboard Urgencia</h1>
+      <small>Hospital San José</small>
+    </div>
+  </div>
+  <div id="spinner" class="spinner" title="Sincronizando..."></div>
+</header>
+
+<!-- TABS -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('capture',this)">① Captura</button>
+  <button class="tab-btn" onclick="switchTab('graficos',this)">② Gráficos</button>
+</div>
+
+<!-- MAIN -->
+<main>
+
+  <!-- TAB: CAPTURA -->
+  <section id="tab-capture" class="tab-panel active">
+    <div class="capture-grid">
+      <!-- INPUT -->
+      <div class="card">
+        <div class="card-title">Reporte WhatsApp</div>
+        <textarea id="txt-report" placeholder="Pega aquí el reporte de enfermería..."></textarea>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="onParse()">Procesar</button>
+          <button class="btn btn-success" id="btn-save" onclick="onSave()" disabled>Guardar</button>
+        </div>
+      </div>
+      <!-- EXTRACTED -->
+      <div class="card" id="panel-extracted">
+        <div class="card-title">Valores extraídos</div>
+        <div id="ev-content"><p class="empty">Procesa un reporte para ver los valores</p></div>
+      </div>
+    </div>
+    <!-- TABLE -->
+    <div class="card">
+      <div class="card-title">Historial de reportes</div>
+      <div id="table-wrap"></div>
+    </div>
+  </section>
+
+  <!-- TAB: GRÁFICOS -->
+  <section id="tab-graficos" class="tab-panel">
+    <div class="chart-filters" id="filter-btns">
+      <button class="filter-btn active" onclick="setFilter('Todos',this)">Todos</button>
+      <button class="filter-btn" onclick="setFilter('A',this)">Turno A</button>
+      <button class="filter-btn" onclick="setFilter('B',this)">Turno B</button>
+      <button class="filter-btn" onclick="setFilter('C',this)">Turno C</button>
+      <button class="filter-btn" onclick="setFilter('D',this)">Turno D</button>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><h3>Pacientes en Espera y Atención</h3><div class="chart-wrap"><canvas id="ch-espera-atencion"></canvas></div></div>
+      <div class="chart-card"><h3>Hospitalizados (Boarding)</h3><div class="chart-wrap"><canvas id="ch-hosp"></canvas></div></div>
+      <div class="chart-card"><h3>% Box &gt; 6 hrs</h3><div class="chart-wrap"><canvas id="ch-pctbox"></canvas></div></div>
+    </div>
+    <div class="chart-card chart-full">
+      <h3>Hospitalizados por Unidad — Medicina / UTI / Pabellón</h3>
+      <div class="chart-wrap-lg"><canvas id="ch-unidades"></canvas></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <small>Datos almacenados en Google Sheets · sincronización automática</small>
+  <div style="display:flex;gap:8px">
+    <a href="https://docs.google.com/spreadsheets/d/155OvZG0JbjfA7Sl9ISApUeaWcDakI_d7BYjyCLNLFEE/edit?gid=181251294#gid=181251294" target="_blank" class="btn btn-outline-red" style="text-decoration:none">📊 Google Sheets</a>
+    <button class="btn btn-outline-red" onclick="onWipe()">Borrar todo</button>
+  </div>
+</footer>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────────
+const API = 'https://script.google.com/macros/s/AKfycbwdOX-pNUtrGzrybfrOXX84IyBCPdqOLvcG2uSF2hHpnnSSuE0-OpI1nksEp45C2ItK/exec';
+const HEADERS = [
+  'ts','turno','fecha','hora','jefe','total_proceso','espera','tmax_espera',
+  'ambulancias_espera','esi1_esp_n','esi2_esp_n','esi3_esp_n','esi45_esp_n',
+  'esi1_esp_h','esi2_esp_h','esi3_esp_h','esi45_esp_h',
+  'med_espera','cir_espera','tmt_espera',
+  'atencion','box_lt360','box_gt360','tmax_atencion','ambulancias_aten',
+  'esi1_aten_n','esi2_aten_n','esi3_aten_n','esi45_aten_n',
+  'hosp','uci','uti','uco','pabellon','med_hosp','cir_hosp',
+  'uro_tmt','cmq','uce','hosdom','ugcc','hosmet','alta'
+];
+
+let records = [];
+let parsed = null;
+let activeFilter = 'Todos';
+const charts = {};
+
+// ── SPINNER ──────────────────────────────────────────────────
+function showSpinner(){ document.getElementById('spinner').style.display='block' }
+function hideSpinner(){ document.getElementById('spinner').style.display='none' }
+
+// ── NUMBER UTIL ───────────────────────────────────────────────
+function num(v){ return parseFloat(String(v).replace(',','.')) || 0; }
+
+// ── TABS ──────────────────────────────────────────────────────
+function switchTab(id, btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='graficos') renderCharts();
+}
+
+// ── FILTER ────────────────────────────────────────────────────
+function setFilter(f, btn){
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCharts();
+}
+
+// ── SORT KEY ─────────────────────────────────────────────────
+function sortKey(r){
+  const parts = (r.fecha||'01/01/2025').split(/[-\/]/);
+  const dd   = parseInt(parts[0])||1;
+  const mm   = parseInt(parts[1])||1;
+  const yyyy = parseInt(parts[2])||new Date().getFullYear();
+  const tp = (r.hora||'00:00').split(':');
+  const hh = parseInt(tp[0])||0;
+  const mi = parseInt(tp[1])||0;
+  return new Date(yyyy,(mm-1),dd,hh,mi).getTime();
+}
+
+// ── PARSER ───────────────────────────────────────────────────
+const MONTH_MAP = {
+  enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,
+  julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12
+};
+
+function parseReport(text){
+  const r = {};
+  HEADERS.forEach(h => r[h] = '');
+
+  // turno
+  const mT = text.match(/[Tt]urno\s+([A-Da-d])/);
+  r.turno = mT ? mT[1].toUpperCase() : '';
+
+  // fecha: tolerates "26- 04", "16-Abril", "25-4", "3/5"
+  const mF = text.match(/[Tt]urno\s+[A-Da-d]\s+([\d]+)\s*[-\/]\s*([\w]+)/);
+  if(mF){
+    const dd = mF[1].padStart(2,'0');
+    const rawMM = mF[2].trim().toLowerCase();
+    const mmNum = MONTH_MAP[rawMM];
+    const mm   = mmNum ? String(mmNum).padStart(2,'0') : rawMM.padStart(2,'0');
+    const yyyy = new Date().getFullYear();
+    r.fecha = dd+'/'+mm+'/'+yyyy;
+  }
+
+  // hora: tolerates multiple spaces, "08.00", "9:00"
+  const mH = text.match(/[Rr]eporte\s+([\d]+)[.:]([\d]{2})\s*hrs?/);
+  if(mH){
+    const hh = mH[1].padStart(2,'0');
+    r.hora = hh+':'+mH[2];
+  } else {
+    const mH2 = text.match(/[Rr]eporte\s+0*([\d]{1,2})\s+hrs?/);
+    if(mH2) r.hora = mH2[1].padStart(2,'0')+':00';
+  }
+
+  // total_proceso
+  const mTP = text.match(/[Tt]otal\s*:\s*(\d+)/);
+  r.total_proceso = mTP ? mTP[1] : '0';
+
+  // espera
+  const mE = text.match(/[Ee]spera\s+de\s+[Aa]tenci[oó]n\s*:\s*(\d+)/);
+  r.espera = mE ? mE[1] : '0';
+
+  // tmax_espera (hrs)
+  const mTE = text.match(/[Tt]iempo\s+[Mm][aá]ximo\s+de\s+[Ee]spera\s*:\s*(\d+)/);
+  r.tmax_espera = mTE ? mTE[1] : '0';
+
+  // ambulancias_espera
+  const mAE = text.match(/🚑\s*(\d+)\s*ambulancias?\s+en\s+[Ee]spera/i);
+  r.ambulancias_espera = mAE ? mAE[1] : '0';
+
+  // Split on 🅰️ line — fallback for different emoji encodings
+  let aIdx = text.indexOf('🅰️'); // 🅰️ with variation selector
+  if(aIdx < 0) aIdx = text.indexOf('🅰'); // 🅰 without variation selector
+  if(aIdx < 0) aIdx = text.toLowerCase().indexOf('(ambulatorio)');
+  const blockEsp = aIdx >= 0 ? text.substring(0, aIdx) : text;
+  const blockAten = aIdx >= 0 ? text.substring(aIdx) : '';
+
+  // ESI en espera (before 🅰️)
+  const mE1n = blockEsp.match(/ESI\s*1\s*=\s*(\d+)/i);
+  const mE2n = blockEsp.match(/ESI\s*2\s*=\s*(\d+)/i);
+  const mE3n = blockEsp.match(/ESI\s*3\s*=\s*(\d+)/i);
+  const mE45n = blockEsp.match(/ESI\s*4[\/\-]?5\s*=\s*(\d+)/i);
+  r.esi1_esp_n  = mE1n  ? mE1n[1]  : '0';
+  r.esi2_esp_n  = mE2n  ? mE2n[1]  : '0';
+  r.esi3_esp_n  = mE3n  ? mE3n[1]  : '0';
+  r.esi45_esp_n = mE45n ? mE45n[1] : '0';
+
+  // ESI horas en espera — usar ➡ para la flecha, evitar emoji en clase de chars
+  const mE1h = blockEsp.match(/ESI\s*1[^\n]*➡[^\n]*?(\d+)\s*h/i);
+  const mE2h = blockEsp.match(/ESI\s*2[^\n]*➡[^\n]*?(\d+)\s*h/i);
+  const mE3h = blockEsp.match(/ESI\s*3[^\n]*➡[^\n]*?(\d+)\s*h/i);
+  const mE45h = blockEsp.match(/ESI\s*4[^\n]*➡[^\n]*?(\d+)\s*h/i);
+  r.esi1_esp_h  = mE1h  ? mE1h[1]  : '0';
+  r.esi2_esp_h  = mE2h  ? mE2h[1]  : '0';
+  r.esi3_esp_h  = mE3h  ? mE3h[1]  : '0';
+  r.esi45_esp_h = mE45h ? mE45h[1] : '0';
+
+  // Med/Cir/TMT espera
+  const mME = blockEsp.match(/MEDICINA\s*:\s*(\d+)/i);
+  const mCE = blockEsp.match(/CIRUGIA\s*:\s*(\d+)/i);
+  const mTME = blockEsp.match(/TMT\s*:\s*(\d+)/i);
+  r.med_espera = mME ? mME[1] : '0';
+  r.cir_espera = mCE ? mCE[1] : '0';
+  r.tmt_espera = mTME ? mTME[1] : '0';
+
+  // Proceso de atención (ambulatorio) — after 🅰️
+  const mAT = blockAten.match(/[Pp]roceso\s+de\s+[Aa]tenci[oó]n[^\d]*(\d+)/);
+  r.atencion = mAT ? mAT[1] : '0';
+
+  // Box < 360 min — captura el primer número tras "Min" en la misma línea
+  const mBL = blockAten.match(/[Bb]ox\s*<\s*360\s*[Mm]in[^\n]*?(\d+)\s*pacientes?/i);
+  r.box_lt360 = mBL ? mBL[1] : '0';
+
+  // Box > 360 min
+  const mBG = blockAten.match(/[Bb]ox\s*[>]\s*360\s*[Mm]in[^\n]*?(\d+)\s*pacientes?/i);
+  r.box_gt360 = mBG ? mBG[1] : '0';
+
+  // tmax_atencion (hrs)
+  const mTA = blockAten.match(/[Tt]iempo\s+[Mm][aá]ximo\s+en\s+[Aa]tenci[oó]n\s*:\s*(\d+)\s*hrs?\s*(\d+)?\s*min?/i);
+  if(mTA){
+    const hh = mTA[1];
+    const mi = mTA[2]||'0';
+    r.tmax_atencion = hh+'h'+mi.padStart(2,'0')+'m';
+  }
+
+  // ambulancias en atención
+  const mAA = blockAten.match(/🚑\s*(\d+)\s*[Uu]suario/);
+  r.ambulancias_aten = mAA ? mAA[1] : '0';
+
+  // ESI en atención (after 🅰️)
+  const mA1n = blockAten.match(/ESI\s*1\s*=\s*(\d+)\s*pctes?/i);
+  const mA2n = blockAten.match(/ESI\s*2\s*=\s*(\d+)\s*pctes?/i);
+  const mA3n = blockAten.match(/ESI\s*3\s*=\s*(\d+)\s*pctes?/i);
+  const mA45n = blockAten.match(/ESI\s*4\s*[-–]\s*5\s*=\s*(\d+)\s*pctes?/i);
+  r.esi1_aten_n  = mA1n  ? mA1n[1]  : '0';
+  r.esi2_aten_n  = mA2n  ? mA2n[1]  : '0';
+  r.esi3_aten_n  = mA3n  ? mA3n[1]  : '0';
+  r.esi45_aten_n = mA45n ? mA45n[1] : '0';
+
+  // hospitalizados total
+  const mHosp = text.match(/\(\s*(\d+)\s*hospitalizados?\s*\)/i);
+  r.hosp = mHosp ? mHosp[1] : '0';
+
+  // unidades — parse block after "Con criterio:"
+  const mCrit = text.match(/[Cc]on\s+criterio\s*:([\s\S]+?)(?:EU\s|$)/);
+  if(mCrit){
+    const blk = mCrit[1];
+    const uMap = {
+      uci:/UCI\s*:\s*(\d+)/i, uti:/UTI\s*:\s*(\d+)/i, uco:/UCO\s*:\s*(\d+)/i,
+      pabellon:/PABELLON\s*:\s*(\d+)/i, med_hosp:/MEDICINA\s*:\s*(\d+)/i,
+      cir_hosp:/CIRUGIA\s*:\s*(\d+)/i, uro_tmt:/URO\/TMT\s*:\s*(\d+)/i,
+      cmq:/CMQ\s*:\s*(\d+)/i, uce:/UCE\s*:\s*(\d+)/i,
+      hosdom:/HOSDOM\s*:\s*(\d+)/i, ugcc:/UGCC\s*:\s*(\d+)/i,
+      hosmet:/HOSMET\s*:\s*(\d+)/i, alta:/ALTA\s*:\s*(\d+)/i
+    };
+    for(const [key,rx] of Object.entries(uMap)){
+      const m = blk.match(rx);
+      r[key] = m ? m[1] : '0';
+    }
+  }
+
+  // jefe
+  const mJ = text.match(/EU\s+(.+?)\s*\n?\s*Jefe/i);
+  r.jefe = mJ ? mJ[1].trim() : '';
+
+  // ts
+  r.ts = Date.now().toString();
+
+  return r;
+}
+
+// ── KPIs ──────────────────────────────────────────────────────
+function calcKPIs(r){
+  const espera = num(r.espera);
+  const atencion = num(r.atencion);
+  const hosp = num(r.hosp);
+  const box_gt360 = num(r.box_gt360);
+  const presion = hosp > 0 ? espera / hosp : 0;
+  const ratio   = espera > 0 ? atencion / espera : 0;
+  const pct_box = atencion > 0 ? (box_gt360 / atencion) * 100 : 0;
+  return { presion, ratio, pct_box };
+}
+
+function getStatus(r){
+  const {presion, ratio} = calcKPIs(r);
+  if(presion < 1 && ratio >= 1) return {icon:'🟢', label:'Óptimo', cls:'badge-green'};
+  if(presion >= 1 && ratio < 1) return {icon:'🔴', label:'Crítico', cls:'badge-red'};
+  return {icon:'🟡', label:'Intermedio', cls:'badge-amber'};
+}
+
+function calcISUEH(r){
+  const {pct_box, ratio} = calcKPIs(r);
+  const hosp = num(r.hosp);
+  let d1 = hosp < 45 ? 0 : hosp <= 55 ? 1 : hosp <= 65 ? 2 : 3;
+  let d2 = pct_box < 10 ? 0 : pct_box <= 15 ? 1 : pct_box <= 20 ? 2 : 3;
+  let d3 = ratio > 1 ? 0 : ratio >= 0.8 ? 1 : ratio >= 0.5 ? 2 : 3;
+  const score = d1 + d2 + d3;
+  if(score <= 1) return {score, label:'Normal', cls:'badge-green'};
+  if(score <= 3) return {score, label:'Tensión', cls:'badge-amber'};
+  if(score <= 6) return {score, label:'Saturado', cls:'badge-orange'};
+  return {score, label:'Crítico', cls:'badge-red'};
+}
+
+// ── API ───────────────────────────────────────────────────────
+async function apiCall(payload){
+  showSpinner();
+  try {
+    const url = API + '?payload=' + encodeURIComponent(JSON.stringify(payload));
+    const res = await fetch(url, {redirect:'follow'});
+    return await res.json();
+  } catch(e){ console.error('API error',e); return {ok:false}; }
+  finally { hideSpinner(); }
+}
+
+async function loadRecords(){
+  showSpinner();
+  try {
+    const res = await fetch(API + '?payload=' + encodeURIComponent(JSON.stringify({action:'get'})), {redirect:'follow'});
+    const data = await res.json();
+    if(data.ok && data.records){
+      records = data.records.map(r => {
+        const norm = {};
+        for(const k of Object.keys(r)){
+          norm[k] = typeof r[k]==='string' ? r[k].replace(',','.') : r[k];
+        }
+        // normalize hora leading zero
+        if(norm.hora) norm.hora = String(norm.hora).replace(/^(\d):/, '0$1:');
+        return norm;
+      });
+    }
+  } catch(e){ console.error('Load error',e); }
+  finally { hideSpinner(); }
+  renderTable();
+}
+
+async function saveRecord(rec){
+  const stringified = {};
+  for(const [k,v] of Object.entries(rec)){
+    stringified[k] = String(v);
+  }
+  await apiCall({action:'add', record:stringified});
+  await loadRecords();
+}
+
+async function deleteRecord(ts){
+  await apiCall({action:'delete', ts:String(ts)});
+  await loadRecords();
+}
+
+async function wipeAll(){
+  await apiCall({action:'wipe'});
+  records = [];
+  renderTable();
+  renderCharts();
+}
+
+// ── RENDER EXTRACTED VALUES ───────────────────────────────────
+function renderExtracted(r){
+  const {presion, ratio, pct_box} = calcKPIs(r);
+  const st = getStatus(r);
+  const is = calcISUEH(r);
+
+  const kpiColor = (val, low, high) => {
+    if(val < low) return 'color:var(--green)';
+    if(val < high) return 'color:var(--amber)';
+    return 'color:var(--red)';
+  };
+
+  document.getElementById('ev-content').innerHTML = `
+    <div class="ev-section">
+      <div class="ev-section-title">Identificación</div>
+      <div class="ev-grid">
+        <div class="ev-item"><div class="ev-label">Turno</div><div class="ev-value">${r.turno||'—'}</div></div>
+        <div class="ev-item"><div class="ev-label">Fecha</div><div class="ev-value mono">${r.fecha||'—'}</div></div>
+        <div class="ev-item"><div class="ev-label">Hora</div><div class="ev-value mono">${r.hora||'—'}</div></div>
+        <div class="ev-item" style="grid-column:span 2"><div class="ev-label">Jefe de turno</div><div class="ev-value" style="font-size:11px">${r.jefe||'—'}</div></div>
+      </div>
+    </div>
+
+    <div class="ev-section">
+      <div class="ev-section-title">Proceso general</div>
+      <div class="ev-grid">
+        <div class="ev-item"><div class="ev-label">Total proceso</div><div class="ev-value">${r.total_proceso}</div></div>
+        <div class="ev-item"><div class="ev-label">En espera</div><div class="ev-value">${r.espera}</div></div>
+        <div class="ev-item"><div class="ev-label">T.máx espera</div><div class="ev-value mono">${r.tmax_espera} h</div></div>
+        <div class="ev-item"><div class="ev-label">Amb. espera</div><div class="ev-value">${r.ambulancias_espera}</div></div>
+      </div>
+    </div>
+
+    <div class="ev-section">
+      <div class="ev-section-title">ESI en espera</div>
+      <div class="ev-grid">
+        <div class="ev-item"><div class="ev-label">ESI 1</div><div class="ev-value">${r.esi1_esp_n} <small style="font-family:var(--font-mono);font-size:10px;color:var(--gray-400)">${r.esi1_esp_h}h</small></div></div>
+        <div class="ev-item"><div class="ev-label">ESI 2</div><div class="ev-value">${r.esi2_esp_n} <small style="font-family:var(--font-mono);font-size:10px;color:var(--gray-400)">${r.esi2_esp_h}h</small></div></div>
+        <div class="ev-item"><div class="ev-label">ESI 3</div><div class="ev-value">${r.esi3_esp_n} <small style="font-family:var(--font-mono);font-size:10px;color:var(--gray-400)">${r.esi3_esp_h}h</small></div></div>
+        <div class="ev-item"><div class="ev-label">ESI 4/5</div><div class="ev-value">${r.esi45_esp_n} <small style="font-family:var(--font-mono);font-size:10px;color:var(--gray-400)">${r.esi45_esp_h}h</small></div></div>
+        <div class="ev-item"><div class="ev-label">Med</div><div class="ev-value">${r.med_espera}</div></div>
+        <div class="ev-item"><div class="ev-label">Cir</div><div class="ev-value">${r.cir_espera}</div></div>
+        <div class="ev-item"><div class="ev-label">TMT</div><div class="ev-value">${r.tmt_espera}</div></div>
+      </div>
+    </div>
+
+    <div class="ev-section">
+      <div class="ev-section-title">Ambulatorio en atención</div>
+      <div class="ev-grid">
+        <div class="ev-item"><div class="ev-label">En atención</div><div class="ev-value">${r.atencion}</div></div>
+        <div class="ev-item"><div class="ev-label">Box &lt;6h</div><div class="ev-value">${r.box_lt360}</div></div>
+        <div class="ev-item"><div class="ev-label">Box &gt;6h</div><div class="ev-value">${r.box_gt360}</div></div>
+        <div class="ev-item"><div class="ev-label">T.máx aten.</div><div class="ev-value mono">${r.tmax_atencion||'—'}</div></div>
+        <div class="ev-item"><div class="ev-label">Amb. aten.</div><div class="ev-value">${r.ambulancias_aten}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 1</div><div class="ev-value">${r.esi1_aten_n}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 2</div><div class="ev-value">${r.esi2_aten_n}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 3</div><div class="ev-value">${r.esi3_aten_n}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 4/5</div><div class="ev-value">${r.esi45_aten_n}</div></div>
+      </div>
+    </div>
+
+    <div class="ev-section">
+      <div class="ev-section-title">Hospitalizados — ${r.hosp} total</div>
+      <div class="ev-grid">
+        <div class="ev-item"><div class="ev-label">UCI</div><div class="ev-value">${r.uci}</div></div>
+        <div class="ev-item"><div class="ev-label">UTI</div><div class="ev-value">${r.uti}</div></div>
+        <div class="ev-item"><div class="ev-label">UCO</div><div class="ev-value">${r.uco}</div></div>
+        <div class="ev-item"><div class="ev-label">Pabellón</div><div class="ev-value">${r.pabellon}</div></div>
+        <div class="ev-item"><div class="ev-label">Medicina</div><div class="ev-value">${r.med_hosp}</div></div>
+        <div class="ev-item"><div class="ev-label">Cirugía</div><div class="ev-value">${r.cir_hosp}</div></div>
+        <div class="ev-item"><div class="ev-label">URO/TMT</div><div class="ev-value">${r.uro_tmt}</div></div>
+        <div class="ev-item"><div class="ev-label">CMQ</div><div class="ev-value">${r.cmq}</div></div>
+        <div class="ev-item"><div class="ev-label">UCE</div><div class="ev-value">${r.uce}</div></div>
+        <div class="ev-item"><div class="ev-label">HOSDOM</div><div class="ev-value">${r.hosdom}</div></div>
+        <div class="ev-item"><div class="ev-label">UGCC</div><div class="ev-value">${r.ugcc}</div></div>
+        <div class="ev-item"><div class="ev-label">HOSMET</div><div class="ev-value">${r.hosmet}</div></div>
+        <div class="ev-item"><div class="ev-label">ALTA</div><div class="ev-value">${r.alta}</div></div>
+      </div>
+    </div>
+
+    <div class="ev-section">
+      <div class="ev-section-title">KPIs calculados</div>
+      <div class="ev-grid">
+        <div class="ev-item">
+          <div class="ev-label">Presión camas</div>
+          <div class="ev-value" style="${kpiColor(presion,0.7,1.0)}">${presion.toFixed(2)}</div>
+        </div>
+        <div class="ev-item">
+          <div class="ev-label">Ratio ambulatorio</div>
+          <div class="ev-value" style="color:${ratio>=1?'var(--green)':ratio>=0.8?'var(--amber)':'var(--red)'}">${ratio.toFixed(2)}</div>
+        </div>
+        <div class="ev-item">
+          <div class="ev-label">% Box &gt;6h</div>
+          <div class="ev-value" style="color:${pct_box<10?'var(--green)':pct_box<20?'var(--amber)':'var(--red)'}">${pct_box.toFixed(1)}%</div>
+        </div>
+        <div class="ev-item">
+          <div class="ev-label">Estado turno</div>
+          <div class="ev-value"><span class="badge ${st.cls}">${st.icon} ${st.label}</span></div>
+        </div>
+        <div class="ev-item">
+          <div class="ev-label">IS-UEH</div>
+          <div class="ev-value"><span class="badge ${is.cls}">${is.score} – ${is.label}</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── RENDER TABLE ──────────────────────────────────────────────
+function renderTable(){
+  const wrap = document.getElementById('table-wrap');
+  if(!records.length){
+    wrap.innerHTML = '<p class="empty">Sin registros. Procesa y guarda un reporte.</p>';
+    return;
+  }
+  const sorted = [...records].sort((a,b) => sortKey(b)-sortKey(a));
+  const latestTs = String(sorted[0].ts);
+
+  const rows = sorted.map((r,i) => {
+    const {presion, ratio, pct_box} = calcKPIs(r);
+    const st = getStatus(r);
+    const is = calcISUEH(r);
+    const isLatest = String(r.ts) === latestTs;
+    const rowCls = isLatest ? 'row-latest' : '';
+    const star = isLatest ? '★ ' : '';
+    return `<tr class="${rowCls}">
+      <td class="mono">${star}${i+1}</td>
+      <td class="mono">${r.fecha||'—'}</td>
+      <td><span class="badge badge-blue">${r.turno||'—'}</span></td>
+      <td class="mono">${r.hora||'—'}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.jefe||'—'}</td>
+      <td class="mono">${num(r.espera)}</td>
+      <td class="mono">${num(r.atencion)}</td>
+      <td class="mono">${num(r.hosp)}</td>
+      <td class="mono">${num(r.box_lt360)}</td>
+      <td class="mono">${num(r.box_gt360)}</td>
+      <td class="mono" style="color:${presion<1?'var(--green)':presion<1.5?'var(--amber)':'var(--red)'}">${presion.toFixed(2)}</td>
+      <td class="mono" style="color:${ratio>=1?'var(--green)':ratio>=0.8?'var(--amber)':'var(--red)'}">${ratio.toFixed(2)}</td>
+      <td class="mono" style="color:${pct_box<10?'var(--green)':pct_box<20?'var(--amber)':'var(--red)'}">${pct_box.toFixed(1)}%</td>
+      <td><span class="badge ${is.cls}">${is.score}</span></td>
+      <td><span class="badge ${st.cls}">${st.icon} ${st.label}</span></td>
+      <td><button class="btn-del" onclick="onDelete('${r.ts}')" title="Eliminar">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Fecha</th><th>T</th><th>Hora</th><th>Jefe</th>
+        <th>Espera</th><th>Aten.</th><th>Hosp</th><th>Box&lt;6h</th><th>Box&gt;6h</th>
+        <th>Presión</th><th>Ratio</th><th>%Box</th><th>IS-UEH</th><th>Estado</th><th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>`;
+}
+
+// ── CHART HELPERS ─────────────────────────────────────────────
+function makeLineChart(canvasId, label, color, data, labels, alertY, tickFormat){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  if(charts[canvasId]) charts[canvasId].destroy();
+
+  const pointColors = data.map((_,i) => i===data.length-1 ? '#dc2626' : color);
+  const pointRadius = data.map((_,i) => i===data.length-1 ? 5 : 3);
+
+  const datasets = [{
+    label, data,
+    borderColor: color, backgroundColor: color+'22',
+    fill: false, tension: 0.3,
+    pointBackgroundColor: pointColors,
+    pointRadius: pointRadius,
+    pointHoverRadius: 6,
+    borderWidth: 2
+  }];
+
+  if(alertY !== undefined){
+    datasets.push({
+      label: 'Alerta', data: labels.map(()=>alertY),
+      borderColor: '#9ca3af', borderDash: [6,4],
+      borderWidth: 1, pointRadius: 0,
+      fill: false, tension: 0
+    });
+  }
+
+  const yConfig = {
+    ticks: { font:{size:10} },
+    grid:{color:'#f3f4f6'},
+    beginAtZero:true
+  };
+
+  if(tickFormat === 'percent'){
+    yConfig.ticks.callback = function(value) {
+      return value + '%';
+    };
+  }
+
+  charts[canvasId] = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font:{size:10}, maxRotation:45 }, grid:{color:'#f3f4f6'} },
+        y: yConfig
+      }
+    }
+  });
+}
+
+// ── RENDER CHARTS ─────────────────────────────────────────────
+function renderCharts(){
+  let data = activeFilter === 'Todos' ? [...records] : records.filter(r=>r.turno===activeFilter);
+  data.sort((a,b) => sortKey(a)-sortKey(b));
+
+  const labels = data.map(r => {
+    const parts = (r.fecha||'').split(/[-\/]/);
+    const fShort = parts.length >= 3 ? parts[0]+'/'+parts[1]+'/'+parts[2] : (r.fecha||'');
+    return fShort;
+  });
+
+  makeLineChart('ch-espera',   'Espera',     '#dc2626', data.map(r=>num(r.espera)),   labels);
+  makeLineChart('ch-atencion', 'Atención',   '#1d4ed8', data.map(r=>num(r.atencion)), labels);
+  makeLineChart('ch-hosp',     'Hosp.',      '#b45309', data.map(r=>num(r.hosp)),     labels);
+  makeLineChart('ch-pctbox',   '% Box>6h',  '#7c3aed', data.map(r=>calcKPIs(r).pct_box), labels, 30, 'percent');
+
+  // Chart: Espera + Atención (combinado)
+  const c1 = document.getElementById('ch-espera-atencion');
+  if(c1){
+    if(charts['ch-espera-atencion']) charts['ch-espera-atencion'].destroy();
+    charts['ch-espera-atencion'] = new Chart(c1, {
+      type:'line',
+      data:{
+        labels,
+        datasets:[
+          { label:'Espera', data:data.map(r=>num(r.espera)), borderColor:'#dc2626', backgroundColor:'transparent', tension:0.3, pointRadius:3, borderWidth:2, fill:false },
+          { label:'Atención', data:data.map(r=>num(r.atencion)), borderColor:'#1d4ed8', backgroundColor:'transparent', tension:0.3, pointRadius:3, borderWidth:2, fill:false }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:true, position:'top', labels:{font:{size:11}, boxWidth:12} } },
+        scales:{
+          x:{ ticks:{font:{size:10},maxRotation:45}, grid:{color:'#f3f4f6'} },
+          y:{ ticks:{font:{size:10}}, grid:{color:'#f3f4f6'}, beginAtZero:true }
+        }
+      }
+    });
+  }
+
+  // Chart 7 — multi-line unidades
+  const c7 = document.getElementById('ch-unidades');
+  if(c7){
+    if(charts['ch-unidades']) charts['ch-unidades'].destroy();
+    charts['ch-unidades'] = new Chart(c7, {
+      type:'line',
+      data:{
+        labels,
+        datasets:[
+          { label:'Medicina', data:data.map(r=>num(r.med_hosp)), borderColor:'#1d4ed8', backgroundColor:'transparent', tension:0.3, pointRadius:3, borderWidth:2, fill:false },
+          { label:'UTI',      data:data.map(r=>num(r.uti)),      borderColor:'#15803d', backgroundColor:'transparent', tension:0.3, pointRadius:3, borderWidth:2, fill:false },
+          { label:'Pabellón', data:data.map(r=>num(r.pabellon)), borderColor:'#b45309', backgroundColor:'transparent', tension:0.3, pointRadius:3, borderWidth:2, fill:false }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:true, position:'top', labels:{font:{size:11}, boxWidth:12} } },
+        scales:{
+          x:{ ticks:{font:{size:10},maxRotation:45}, grid:{color:'#f3f4f6'} },
+          y:{ ticks:{font:{size:10}}, grid:{color:'#f3f4f6'}, beginAtZero:true, title:{display:true,text:'Pacientes hospitalizados',font:{size:11}} }
+        }
+      }
+    });
+  }
+}
+
+// ── EVENT HANDLERS ────────────────────────────────────────────
+function onParse(){
+  try {
+    const text = document.getElementById('txt-report').value;
+    if(!text.trim()){ alert('Pega un reporte primero.'); return; }
+    parsed = parseReport(text);
+    renderExtracted(parsed);
+    document.getElementById('btn-save').disabled = false;
+  } catch(e){
+    alert('Error al procesar: ' + e.message);
+    console.error(e);
+  }
+}
+
+async function onSave(){
+  if(!parsed){ alert('Primero procesa un reporte.'); return; }
+  document.getElementById('btn-save').disabled = true;
+  await saveRecord(parsed);
+  parsed = null;
+  document.getElementById('txt-report').value = '';
+  document.getElementById('ev-content').innerHTML = '<p class="empty">Reporte guardado correctamente.</p>';
+}
+
+async function onDelete(ts){
+  if(!confirm('¿Eliminar este registro?')) return;
+  await deleteRecord(ts);
+}
+
+async function onWipe(){
+  if(!confirm('¿Borrar TODOS los registros? Esta acción no se puede deshacer.')) return;
+  await wipeAll();
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+loadRecords();
+</script>
+</body>
+</html>
