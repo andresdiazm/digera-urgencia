@@ -66,6 +66,12 @@ textarea:focus{outline:none;border-color:var(--blue);background:var(--white)}
 .ev-label{font-size:10px;color:var(--gray-500);margin-bottom:2px}
 .ev-value{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--gray-900)}
 .ev-value.mono{font-size:12px}
+.ev-input{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--gray-900);background:transparent;border:none;border-bottom:1px dashed var(--gray-300);padding:1px 2px;width:100%;min-width:0;transition:border-color .15s}
+.ev-input:focus{outline:none;border-bottom-color:var(--blue);background:var(--blue-light);border-radius:2px}
+input[type=number].ev-input{-moz-appearance:textfield;appearance:textfield}
+input[type=number].ev-input::-webkit-outer-spin-button,input[type=number].ev-input::-webkit-inner-spin-button{-webkit-appearance:none;appearance:none}
+.btn-export{background:var(--white);color:var(--blue);border:1.5px solid var(--blue);font-size:12px;padding:5px 14px;border-radius:20px;font-weight:600;cursor:pointer;font-family:var(--font-ui);transition:all .15s;white-space:nowrap}
+.btn-export:hover{background:var(--blue);color:#fff}
 /* badges */
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
 .badge-green{background:var(--green-light);color:var(--green)}
@@ -164,12 +170,15 @@ footer small{color:var(--gray-400);font-size:11px}
 
   <!-- TAB: GRÁFICOS -->
   <section id="tab-graficos" class="tab-panel">
-    <div class="chart-filters" id="filter-btns">
-      <button class="filter-btn active" onclick="setFilter('Todos',this)">Todos</button>
-      <button class="filter-btn" onclick="setFilter('A',this)">Turno A</button>
-      <button class="filter-btn" onclick="setFilter('B',this)">Turno B</button>
-      <button class="filter-btn" onclick="setFilter('C',this)">Turno C</button>
-      <button class="filter-btn" onclick="setFilter('D',this)">Turno D</button>
+    <div class="chart-filters" id="filter-btns" style="justify-content:space-between;align-items:center">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="filter-btn active" onclick="setFilter('Todos',this)">Todos</button>
+        <button class="filter-btn" onclick="setFilter('A',this)">Turno A</button>
+        <button class="filter-btn" onclick="setFilter('B',this)">Turno B</button>
+        <button class="filter-btn" onclick="setFilter('C',this)">Turno C</button>
+        <button class="filter-btn" onclick="setFilter('D',this)">Turno D</button>
+      </div>
+      <button class="btn-export" onclick="exportCharts()">⬇ Exportar JPEG</button>
     </div>
     <div class="charts-grid">
       <div class="chart-card"><h3>Pacientes en Espera y Atención</h3><div class="chart-wrap"><canvas id="ch-espera-atencion"></canvas></div></div>
@@ -186,7 +195,7 @@ footer small{color:var(--gray-400);font-size:11px}
 
 <!-- FOOTER -->
 <footer>
-  <small>Datos almacenados en Google Sheets · sincronización automática</small>
+  <small>Datos almacenados en Google Sheets · sincronización automática · v1.1</small>
   <div style="display:flex;gap:8px">
     <a href="https://docs.google.com/spreadsheets/d/155OvZG0JbjfA7Sl9ISApUeaWcDakI_d7BYjyCLNLFEE/edit?gid=181251294#gid=181251294" target="_blank" class="btn btn-outline-red" style="text-decoration:none">📊 Google Sheets</a>
     <button class="btn btn-outline-red" onclick="onWipe()">Borrar todo</button>
@@ -487,110 +496,86 @@ async function wipeAll(){
 
 // ── RENDER EXTRACTED VALUES ───────────────────────────────────
 function renderExtracted(r){
-  const {presion, ratio, pct_box} = calcKPIs(r);
-  const st = getStatus(r);
-  const is = calcISUEH(r);
-
-  const kpiColor = (val, low, high) => {
-    if(val < low) return 'color:var(--green)';
-    if(val < high) return 'color:var(--amber)';
-    return 'color:var(--red)';
-  };
+  const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const n = f => `<input class="ev-input" type="number" min="0" value="${esc(r[f])}" oninput="updateParsed('${f}',this.value)">`;
+  const t = f => `<input class="ev-input" type="text" value="${esc(r[f])}" oninput="updateParsed('${f}',this.value)">`;
 
   document.getElementById('ev-content').innerHTML = `
     <div class="ev-section">
       <div class="ev-section-title">Identificación</div>
       <div class="ev-grid">
-        <div class="ev-item"><div class="ev-label">Turno</div><div class="ev-value">${r.turno||'—'}</div></div>
-        <div class="ev-item"><div class="ev-label">Fecha</div><div class="ev-value mono">${r.fecha||'—'}</div></div>
-        <div class="ev-item"><div class="ev-label">Hora</div><div class="ev-value mono">${r.hora||'—'}</div></div>
-        <div class="ev-item" style="grid-column:span 2"><div class="ev-label">Jefe de turno</div><div class="ev-value" style="font-size:11px">${r.jefe||'—'}</div></div>
+        <div class="ev-item"><div class="ev-label">Turno</div><div class="ev-value">${t('turno')}</div></div>
+        <div class="ev-item"><div class="ev-label">Fecha</div><div class="ev-value">${t('fecha')}</div></div>
+        <div class="ev-item"><div class="ev-label">Hora</div><div class="ev-value">${t('hora')}</div></div>
+        <div class="ev-item" style="grid-column:span 2"><div class="ev-label">Jefe de turno</div><div class="ev-value">${t('jefe')}</div></div>
       </div>
     </div>
 
     <div class="ev-section">
       <div class="ev-section-title">Proceso general</div>
       <div class="ev-grid">
-        <div class="ev-item"><div class="ev-label">Total proceso</div><div class="ev-value">${r.total_proceso}</div></div>
-        <div class="ev-item"><div class="ev-label">En espera</div><div class="ev-value">${r.espera}</div></div>
-        <div class="ev-item"><div class="ev-label">T.máx espera</div><div class="ev-value mono">${r.tmax_espera} h</div></div>
-        <div class="ev-item"><div class="ev-label">Amb. espera</div><div class="ev-value">${r.ambulancias_espera}</div></div>
+        <div class="ev-item"><div class="ev-label">Total proceso</div><div class="ev-value">${n('total_proceso')}</div></div>
+        <div class="ev-item"><div class="ev-label">En espera</div><div class="ev-value">${n('espera')}</div></div>
+        <div class="ev-item"><div class="ev-label">T.máx espera (h)</div><div class="ev-value">${n('tmax_espera')}</div></div>
+        <div class="ev-item"><div class="ev-label">Amb. espera</div><div class="ev-value">${n('ambulancias_espera')}</div></div>
       </div>
     </div>
 
     <div class="ev-section">
       <div class="ev-section-title">ESI en espera</div>
       <div class="ev-grid">
-        <div class="ev-item"><div class="ev-label">ESI 1</div><div class="ev-value">${r.esi1_esp_n} <small style="font-family:var(--font-mono);font-size:10px;color:var(--gray-400)">${r.esi1_esp_h}h</small></div></div>
-        <div class="ev-item"><div class="ev-label">ESI 2</div><div class="ev-value">${r.esi2_esp_n} <small style="font-family:var(--font-mono);font-size:10px;color:var(--gray-400)">${r.esi2_esp_h}h</small></div></div>
-        <div class="ev-item"><div class="ev-label">ESI 3</div><div class="ev-value">${r.esi3_esp_n} <small style="font-family:var(--font-mono);font-size:10px;color:var(--gray-400)">${r.esi3_esp_h}h</small></div></div>
-        <div class="ev-item"><div class="ev-label">ESI 4/5</div><div class="ev-value">${r.esi45_esp_n} <small style="font-family:var(--font-mono);font-size:10px;color:var(--gray-400)">${r.esi45_esp_h}h</small></div></div>
-        <div class="ev-item"><div class="ev-label">Med</div><div class="ev-value">${r.med_espera}</div></div>
-        <div class="ev-item"><div class="ev-label">Cir</div><div class="ev-value">${r.cir_espera}</div></div>
-        <div class="ev-item"><div class="ev-label">TMT</div><div class="ev-value">${r.tmt_espera}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 1 (n)</div><div class="ev-value">${n('esi1_esp_n')}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 1 (h)</div><div class="ev-value">${n('esi1_esp_h')}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 2 (n)</div><div class="ev-value">${n('esi2_esp_n')}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 2 (h)</div><div class="ev-value">${n('esi2_esp_h')}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 3 (n)</div><div class="ev-value">${n('esi3_esp_n')}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 3 (h)</div><div class="ev-value">${n('esi3_esp_h')}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 4/5 (n)</div><div class="ev-value">${n('esi45_esp_n')}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 4/5 (h)</div><div class="ev-value">${n('esi45_esp_h')}</div></div>
+        <div class="ev-item"><div class="ev-label">Med</div><div class="ev-value">${n('med_espera')}</div></div>
+        <div class="ev-item"><div class="ev-label">Cir</div><div class="ev-value">${n('cir_espera')}</div></div>
+        <div class="ev-item"><div class="ev-label">TMT</div><div class="ev-value">${n('tmt_espera')}</div></div>
       </div>
     </div>
 
     <div class="ev-section">
       <div class="ev-section-title">Ambulatorio en atención</div>
       <div class="ev-grid">
-        <div class="ev-item"><div class="ev-label">En atención</div><div class="ev-value">${r.atencion}</div></div>
-        <div class="ev-item"><div class="ev-label">Box &lt;6h</div><div class="ev-value">${r.box_lt360}</div></div>
-        <div class="ev-item"><div class="ev-label">Box &gt;6h</div><div class="ev-value">${r.box_gt360}</div></div>
-        <div class="ev-item"><div class="ev-label">T.máx aten.</div><div class="ev-value mono">${r.tmax_atencion||'—'}</div></div>
-        <div class="ev-item"><div class="ev-label">Amb. aten.</div><div class="ev-value">${r.ambulancias_aten}</div></div>
-        <div class="ev-item"><div class="ev-label">ESI 1</div><div class="ev-value">${r.esi1_aten_n}</div></div>
-        <div class="ev-item"><div class="ev-label">ESI 2</div><div class="ev-value">${r.esi2_aten_n}</div></div>
-        <div class="ev-item"><div class="ev-label">ESI 3</div><div class="ev-value">${r.esi3_aten_n}</div></div>
-        <div class="ev-item"><div class="ev-label">ESI 4/5</div><div class="ev-value">${r.esi45_aten_n}</div></div>
+        <div class="ev-item"><div class="ev-label">En atención</div><div class="ev-value">${n('atencion')}</div></div>
+        <div class="ev-item"><div class="ev-label">Box &lt;6h</div><div class="ev-value">${n('box_lt360')}</div></div>
+        <div class="ev-item"><div class="ev-label">Box &gt;6h</div><div class="ev-value">${n('box_gt360')}</div></div>
+        <div class="ev-item"><div class="ev-label">T.máx aten.</div><div class="ev-value">${t('tmax_atencion')}</div></div>
+        <div class="ev-item"><div class="ev-label">Amb. aten.</div><div class="ev-value">${n('ambulancias_aten')}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 1</div><div class="ev-value">${n('esi1_aten_n')}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 2</div><div class="ev-value">${n('esi2_aten_n')}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 3</div><div class="ev-value">${n('esi3_aten_n')}</div></div>
+        <div class="ev-item"><div class="ev-label">ESI 4/5</div><div class="ev-value">${n('esi45_aten_n')}</div></div>
       </div>
     </div>
 
     <div class="ev-section">
-      <div class="ev-section-title">Hospitalizados — ${r.hosp} total</div>
+      <div class="ev-section-title">Hospitalizados</div>
       <div class="ev-grid">
-        <div class="ev-item"><div class="ev-label">UCI</div><div class="ev-value">${r.uci}</div></div>
-        <div class="ev-item"><div class="ev-label">UTI</div><div class="ev-value">${r.uti}</div></div>
-        <div class="ev-item"><div class="ev-label">UCO</div><div class="ev-value">${r.uco}</div></div>
-        <div class="ev-item"><div class="ev-label">Pabellón</div><div class="ev-value">${r.pabellon}</div></div>
-        <div class="ev-item"><div class="ev-label">Medicina</div><div class="ev-value">${r.med_hosp}</div></div>
-        <div class="ev-item"><div class="ev-label">Cirugía</div><div class="ev-value">${r.cir_hosp}</div></div>
-        <div class="ev-item"><div class="ev-label">URO/TMT</div><div class="ev-value">${r.uro_tmt}</div></div>
-        <div class="ev-item"><div class="ev-label">CMQ</div><div class="ev-value">${r.cmq}</div></div>
-        <div class="ev-item"><div class="ev-label">UCE</div><div class="ev-value">${r.uce}</div></div>
-        <div class="ev-item"><div class="ev-label">HOSDOM</div><div class="ev-value">${r.hosdom}</div></div>
-        <div class="ev-item"><div class="ev-label">UGCC</div><div class="ev-value">${r.ugcc}</div></div>
-        <div class="ev-item"><div class="ev-label">HOSMET</div><div class="ev-value">${r.hosmet}</div></div>
-        <div class="ev-item"><div class="ev-label">ALTA</div><div class="ev-value">${r.alta}</div></div>
+        <div class="ev-item"><div class="ev-label">Total hosp.</div><div class="ev-value">${n('hosp')}</div></div>
+        <div class="ev-item"><div class="ev-label">UCI</div><div class="ev-value">${n('uci')}</div></div>
+        <div class="ev-item"><div class="ev-label">UTI</div><div class="ev-value">${n('uti')}</div></div>
+        <div class="ev-item"><div class="ev-label">UCO</div><div class="ev-value">${n('uco')}</div></div>
+        <div class="ev-item"><div class="ev-label">Pabellón</div><div class="ev-value">${n('pabellon')}</div></div>
+        <div class="ev-item"><div class="ev-label">Medicina</div><div class="ev-value">${n('med_hosp')}</div></div>
+        <div class="ev-item"><div class="ev-label">Cirugía</div><div class="ev-value">${n('cir_hosp')}</div></div>
+        <div class="ev-item"><div class="ev-label">URO/TMT</div><div class="ev-value">${n('uro_tmt')}</div></div>
+        <div class="ev-item"><div class="ev-label">CMQ</div><div class="ev-value">${n('cmq')}</div></div>
+        <div class="ev-item"><div class="ev-label">UCE</div><div class="ev-value">${n('uce')}</div></div>
+        <div class="ev-item"><div class="ev-label">HOSDOM</div><div class="ev-value">${n('hosdom')}</div></div>
+        <div class="ev-item"><div class="ev-label">UGCC</div><div class="ev-value">${n('ugcc')}</div></div>
+        <div class="ev-item"><div class="ev-label">HOSMET</div><div class="ev-value">${n('hosmet')}</div></div>
+        <div class="ev-item"><div class="ev-label">ALTA</div><div class="ev-value">${n('alta')}</div></div>
       </div>
     </div>
 
-    <div class="ev-section">
-      <div class="ev-section-title">KPIs calculados</div>
-      <div class="ev-grid">
-        <div class="ev-item">
-          <div class="ev-label">Presión camas</div>
-          <div class="ev-value" style="${kpiColor(presion,0.7,1.0)}">${presion.toFixed(2)}</div>
-        </div>
-        <div class="ev-item">
-          <div class="ev-label">Ratio ambulatorio</div>
-          <div class="ev-value" style="color:${ratio>=1?'var(--green)':ratio>=0.8?'var(--amber)':'var(--red)'}">${ratio.toFixed(2)}</div>
-        </div>
-        <div class="ev-item">
-          <div class="ev-label">% Box &gt;6h</div>
-          <div class="ev-value" style="color:${pct_box<10?'var(--green)':pct_box<20?'var(--amber)':'var(--red)'}">${pct_box.toFixed(1)}%</div>
-        </div>
-        <div class="ev-item">
-          <div class="ev-label">Estado turno</div>
-          <div class="ev-value"><span class="badge ${st.cls}">${st.icon} ${st.label}</span></div>
-        </div>
-        <div class="ev-item">
-          <div class="ev-label">IS-UEH</div>
-          <div class="ev-value"><span class="badge ${is.cls}">${is.score} – ${is.label}</span></div>
-        </div>
-      </div>
-    </div>
+    <div class="ev-section" id="ev-kpis"></div>
   `;
+  refreshKPIs();
 }
 
 // ── RENDER TABLE ──────────────────────────────────────────────
@@ -794,6 +779,115 @@ async function onDelete(ts){
 async function onWipe(){
   if(!confirm('¿Borrar TODOS los registros? Esta acción no se puede deshacer.')) return;
   await wipeAll();
+}
+
+// ── EDITABLE VALUES ───────────────────────────────────────────
+function updateParsed(field, value){
+  if(!parsed) return;
+  parsed[field] = value;
+  refreshKPIs();
+}
+
+function refreshKPIs(){
+  if(!parsed) return;
+  const el = document.getElementById('ev-kpis');
+  if(!el) return;
+  const {presion, ratio, pct_box} = calcKPIs(parsed);
+  const st = getStatus(parsed);
+  const is = calcISUEH(parsed);
+  const kC = (v,lo,hi) => v<lo?'color:var(--green)':v<hi?'color:var(--amber)':'color:var(--red)';
+  el.innerHTML = `
+    <div class="ev-section-title">KPIs calculados</div>
+    <div class="ev-grid">
+      <div class="ev-item"><div class="ev-label">Presión camas</div><div class="ev-value" style="${kC(presion,0.7,1.0)}">${presion.toFixed(2)}</div></div>
+      <div class="ev-item"><div class="ev-label">Ratio ambulatorio</div><div class="ev-value" style="color:${ratio>=1?'var(--green)':ratio>=0.8?'var(--amber)':'var(--red)'}">${ratio.toFixed(2)}</div></div>
+      <div class="ev-item"><div class="ev-label">% Box &gt;6h</div><div class="ev-value" style="color:${pct_box<10?'var(--green)':pct_box<20?'var(--amber)':'var(--red)'}">${pct_box.toFixed(1)}%</div></div>
+      <div class="ev-item"><div class="ev-label">Estado turno</div><div class="ev-value"><span class="badge ${st.cls}">${st.icon} ${st.label}</span></div></div>
+      <div class="ev-item"><div class="ev-label">IS-UEH</div><div class="ev-value"><span class="badge ${is.cls}">${is.score} – ${is.label}</span></div></div>
+    </div>`;
+}
+
+// ── EXPORT CHARTS ─────────────────────────────────────────────
+function _roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+async function exportCharts(){
+  if(!charts['ch-espera-atencion']) renderCharts();
+  await new Promise(res => setTimeout(res, 80));
+
+  const W=1600, H=1060, PAD=20, HEADER=52, FOOTER=32;
+  const CELL_W=(W-PAD*3)/2;
+  const CELL_H=(H-HEADER-FOOTER-PAD*3)/2;
+  const TITLE_H=30;
+
+  const cvs = document.createElement('canvas');
+  cvs.width=W; cvs.height=H;
+  const ctx = cvs.getContext('2d');
+
+  ctx.fillStyle='#f1f5f9';
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle='#1d4ed8';
+  ctx.fillRect(0,0,W,HEADER);
+  ctx.fillStyle='#ffffff';
+  ctx.font='bold 20px "IBM Plex Sans",sans-serif';
+  ctx.textBaseline='middle';
+  ctx.fillText('Dashboard UEH — Hospital San José', PAD+8, HEADER/2);
+  const now=new Date();
+  const stamp=now.toLocaleDateString('es-CL')+' '+now.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  ctx.font='13px "IBM Plex Sans",sans-serif';
+  ctx.textAlign='right';
+  ctx.fillText('Turno: '+activeFilter+'   '+stamp, W-PAD, HEADER/2);
+  ctx.textAlign='left';
+
+  const ids    = ['ch-espera-atencion','ch-hosp','ch-pctbox','ch-unidades'];
+  const titles = ['Pacientes en Espera y Atención','Hospitalizados (Boarding)','% Box > 6 hrs','Hospitalizados por Unidad'];
+
+  const loadImg = src => new Promise((res,rej)=>{
+    const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src;
+  });
+
+  for(let i=0;i<4;i++){
+    const col=i%2, row=Math.floor(i/2);
+    const x=PAD+col*(CELL_W+PAD);
+    const y=HEADER+PAD+row*(CELL_H+PAD);
+
+    ctx.fillStyle='#ffffff';
+    ctx.shadowColor='rgba(0,0,0,0.10)'; ctx.shadowBlur=10;
+    _roundRect(ctx,x,y,CELL_W,CELL_H,8);
+    ctx.fill();
+    ctx.shadowBlur=0;
+
+    ctx.fillStyle='#374151';
+    ctx.font='bold 13px "IBM Plex Sans",sans-serif';
+    ctx.textBaseline='middle';
+    ctx.fillText(titles[i], x+12, y+TITLE_H/2);
+
+    const chart=charts[ids[i]];
+    if(chart){
+      try{
+        const img=await loadImg(chart.toBase64Image('image/png',1));
+        ctx.drawImage(img, x+8, y+TITLE_H, CELL_W-16, CELL_H-TITLE_H-8);
+      } catch(e){ console.warn('export error',ids[i],e); }
+    }
+  }
+
+  ctx.fillStyle='#6b7280';
+  ctx.font='11px "IBM Plex Mono",monospace';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText('Dashboard UEH v1.1 · Hospital San José · '+stamp, W/2, H-FOOTER/2);
+
+  const link=document.createElement('a');
+  link.download='UEH_graficos_'+activeFilter+'_'+stamp.replace(/[/:,\s]+/g,'-')+'.jpg';
+  link.href=cvs.toDataURL('image/jpeg',0.93);
+  link.click();
 }
 
 // ── INIT ──────────────────────────────────────────────────────
