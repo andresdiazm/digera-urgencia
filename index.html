@@ -37,8 +37,8 @@ header{background:var(--white);border-bottom:1px solid var(--gray-200);padding:1
 .spinner{width:18px;height:18px;border:2px solid var(--gray-200);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;display:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* ── TABS ── */
-.tab-bar{background:var(--white);border-bottom:1px solid var(--gray-200);padding:0 20px;display:flex;gap:0}
-.tab-btn{padding:10px 18px;font-size:13px;font-weight:600;color:var(--gray-500);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab-bar{background:var(--white);border-bottom:1px solid var(--gray-200);padding:0 20px;display:flex;gap:0;overflow-x:auto}
+.tab-btn{padding:10px 18px;font-size:13px;font-weight:600;color:var(--gray-500);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
 .tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
 .tab-btn:hover:not(.active){color:var(--gray-700)}
 /* ── MAIN ── */
@@ -101,6 +101,12 @@ td{padding:7px 10px;white-space:nowrap;vertical-align:middle}
 .chart-card h3{font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
 .chart-wrap{position:relative;height:180px}
 .chart-wrap-lg{position:relative;height:220px}
+/* ── STAT CARDS ── */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat-card{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:16px 18px;box-shadow:var(--shadow)}
+.stat-card-value{font-family:var(--font-mono);font-size:28px;font-weight:700;line-height:1.1;margin-bottom:4px}
+.stat-card-label{font-size:11px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.stat-card-sub{font-size:11px;color:var(--gray-400);margin-top:2px}
 /* ── FOOTER ── */
 footer{background:var(--white);border-top:1px solid var(--gray-200);padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
 footer small{color:var(--gray-400);font-size:11px}
@@ -110,6 +116,7 @@ footer small{color:var(--gray-400);font-size:11px}
 @media(max-width:900px){
   .capture-grid{grid-template-columns:1fr}
   .charts-grid{grid-template-columns:repeat(2,1fr)}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:600px){
   header{padding:10px 12px}
@@ -117,6 +124,7 @@ footer small{color:var(--gray-400);font-size:11px}
   .tab-btn{padding:8px 12px;font-size:12px}
   .charts-grid{grid-template-columns:1fr}
   .ev-grid{grid-template-columns:repeat(2,1fr)}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 </head>
@@ -138,6 +146,8 @@ footer small{color:var(--gray-400);font-size:11px}
 <div class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('capture',this)">① Captura</button>
   <button class="tab-btn" onclick="switchTab('graficos',this)">② Gráficos</button>
+  <button class="tab-btn" onclick="switchTab('espera',this)">③ Sala de Espera</button>
+  <button class="tab-btn" onclick="switchTab('atencion',this)">④ En Atención</button>
 </div>
 
 <!-- MAIN -->
@@ -172,11 +182,11 @@ footer small{color:var(--gray-400);font-size:11px}
   <section id="tab-graficos" class="tab-panel">
     <div class="chart-filters" id="filter-btns" style="justify-content:space-between;align-items:center">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="filter-btn active" onclick="setFilter('Todos',this)">Todos</button>
-        <button class="filter-btn" onclick="setFilter('A',this)">Turno A</button>
-        <button class="filter-btn" onclick="setFilter('B',this)">Turno B</button>
-        <button class="filter-btn" onclick="setFilter('C',this)">Turno C</button>
-        <button class="filter-btn" onclick="setFilter('D',this)">Turno D</button>
+        <button class="filter-btn active" data-filter="Todos" onclick="setFilter('Todos',this)">Todos</button>
+        <button class="filter-btn" data-filter="A" onclick="setFilter('A',this)">Turno A</button>
+        <button class="filter-btn" data-filter="B" onclick="setFilter('B',this)">Turno B</button>
+        <button class="filter-btn" data-filter="C" onclick="setFilter('C',this)">Turno C</button>
+        <button class="filter-btn" data-filter="D" onclick="setFilter('D',this)">Turno D</button>
       </div>
       <button class="btn-export" onclick="exportCharts()">⬇ Exportar JPEG</button>
     </div>
@@ -191,11 +201,79 @@ footer small{color:var(--gray-400);font-size:11px}
     </div>
   </section>
 
+  <!-- TAB: SALA DE ESPERA -->
+  <section id="tab-espera" class="tab-panel">
+    <div class="chart-filters" style="justify-content:space-between;align-items:center">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="filter-btn active" data-filter="Todos" onclick="setFilter('Todos',this)">Todos</button>
+        <button class="filter-btn" data-filter="A" onclick="setFilter('A',this)">Turno A</button>
+        <button class="filter-btn" data-filter="B" onclick="setFilter('B',this)">Turno B</button>
+        <button class="filter-btn" data-filter="C" onclick="setFilter('C',this)">Turno C</button>
+        <button class="filter-btn" data-filter="D" onclick="setFilter('D',this)">Turno D</button>
+      </div>
+      <small style="color:var(--gray-400);font-size:11px">Último registro del filtro seleccionado</small>
+    </div>
+    <!-- KPI stat cards -->
+    <div class="stat-row" id="esp-stats">
+      <p class="empty" style="grid-column:1/-1">Cargando datos...</p>
+    </div>
+    <!-- Charts row 1 -->
+    <div class="charts-grid">
+      <div class="chart-card"><h3>Total en espera</h3><div class="chart-wrap"><canvas id="ch-esp-total"></canvas></div></div>
+      <div class="chart-card"><h3>Tiempo máximo de espera</h3><div class="chart-wrap"><canvas id="ch-esp-tmax"></canvas></div></div>
+      <div class="chart-card"><h3>Ambulancias en espera</h3><div class="chart-wrap"><canvas id="ch-esp-ambulancias"></canvas></div></div>
+    </div>
+    <!-- Chart full: ESI en espera -->
+    <div class="chart-card chart-full" style="margin-bottom:16px">
+      <h3>ESI en espera — distribución por categoría</h3>
+      <div class="chart-wrap-lg"><canvas id="ch-esp-esi"></canvas></div>
+    </div>
+    <!-- Chart full: Espera por especialidad -->
+    <div class="chart-card chart-full">
+      <h3>Espera por especialidad — Medicina / Cirugía / TMT</h3>
+      <div class="chart-wrap-lg"><canvas id="ch-esp-especialidad"></canvas></div>
+    </div>
+  </section>
+
+  <!-- TAB: EN ATENCIÓN -->
+  <section id="tab-atencion" class="tab-panel">
+    <div class="chart-filters" style="justify-content:space-between;align-items:center">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="filter-btn active" data-filter="Todos" onclick="setFilter('Todos',this)">Todos</button>
+        <button class="filter-btn" data-filter="A" onclick="setFilter('A',this)">Turno A</button>
+        <button class="filter-btn" data-filter="B" onclick="setFilter('B',this)">Turno B</button>
+        <button class="filter-btn" data-filter="C" onclick="setFilter('C',this)">Turno C</button>
+        <button class="filter-btn" data-filter="D" onclick="setFilter('D',this)">Turno D</button>
+      </div>
+      <small style="color:var(--gray-400);font-size:11px">Último registro del filtro seleccionado</small>
+    </div>
+    <!-- KPI stat cards -->
+    <div class="stat-row" id="aten-stats">
+      <p class="empty" style="grid-column:1/-1">Cargando datos...</p>
+    </div>
+    <!-- Charts row 1 -->
+    <div class="charts-grid">
+      <div class="chart-card"><h3>Total en atención</h3><div class="chart-wrap"><canvas id="ch-aten-total"></canvas></div></div>
+      <div class="chart-card"><h3>Box &lt;6h vs &gt;6h</h3><div class="chart-wrap"><canvas id="ch-aten-box"></canvas></div></div>
+      <div class="chart-card"><h3>% Box &gt; 6 hrs</h3><div class="chart-wrap"><canvas id="ch-aten-pct"></canvas></div></div>
+    </div>
+    <!-- Chart full: ESI en atención -->
+    <div class="chart-card chart-full" style="margin-bottom:16px">
+      <h3>ESI en atención — distribución por categoría</h3>
+      <div class="chart-wrap-lg"><canvas id="ch-aten-esi"></canvas></div>
+    </div>
+    <!-- Chart full: T.máx atención -->
+    <div class="chart-card chart-full">
+      <h3>Tiempo máximo en atención — horas</h3>
+      <div class="chart-wrap-lg"><canvas id="ch-aten-tmax"></canvas></div>
+    </div>
+  </section>
+
 </main>
 
 <!-- FOOTER -->
 <footer>
-  <small>Datos almacenados en Google Sheets · sincronización automática · v1.1</small>
+  <small>Datos almacenados en Google Sheets · sincronización automática · v1.2</small>
   <div style="display:flex;gap:8px">
     <a href="https://docs.google.com/spreadsheets/d/155OvZG0JbjfA7Sl9ISApUeaWcDakI_d7BYjyCLNLFEE/edit?gid=181251294#gid=181251294" target="_blank" class="btn btn-outline-red" style="text-decoration:none">📊 Google Sheets</a>
     <button class="btn btn-outline-red" onclick="onWipe()">Borrar todo</button>
@@ -235,14 +313,19 @@ function switchTab(id, btn){
   document.getElementById('tab-'+id).classList.add('active');
   btn.classList.add('active');
   if(id==='graficos') renderCharts();
+  if(id==='espera') renderEspera();
+  if(id==='atencion') renderAtencion();
 }
 
 // ── FILTER ────────────────────────────────────────────────────
 function setFilter(f, btn){
   activeFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll('[data-filter]').forEach(b=>{
+    b.classList.toggle('active', b.dataset.filter === f);
+  });
   renderCharts();
+  renderEspera();
+  renderAtencion();
 }
 
 // ── SORT KEY ─────────────────────────────────────────────────
@@ -682,7 +765,35 @@ function makeLineChart(canvasId, label, color, data, labels, alertY, tickFormat)
   });
 }
 
-// ── RENDER CHARTS ─────────────────────────────────────────────
+function makeMultiLineChart(canvasId, datasets, labels, yTitle){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  if(charts[canvasId]) charts[canvasId].destroy();
+  charts[canvasId] = new Chart(canvas, {
+    type:'line',
+    data:{ labels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:true, position:'top', labels:{font:{size:11}, boxWidth:12} } },
+      scales:{
+        x:{ ticks:{font:{size:10},maxRotation:45}, grid:{color:'#f3f4f6'} },
+        y:{ ticks:{font:{size:10}}, grid:{color:'#f3f4f6'}, beginAtZero:true,
+            title:{ display:!!yTitle, text:yTitle||'', font:{size:11} } }
+      }
+    }
+  });
+}
+
+function shortLabel(r){
+  const p=(r.fecha||'').split(/[-\/]/);
+  return p.length>=2 ? p[0]+'/'+p[1] : (r.fecha||'');
+}
+
+function ds(label, color, data){
+  return {label, data, borderColor:color, backgroundColor:'transparent', tension:0.3, pointRadius:3, borderWidth:2, fill:false};
+}
+
+// ── RENDER CHARTS (tab Gráficos) ──────────────────────────────
 function renderCharts(){
   let data = activeFilter === 'Todos' ? [...records] : records.filter(r=>r.turno===activeFilter);
   data.sort((a,b) => sortKey(a)-sortKey(b));
@@ -746,6 +857,150 @@ function renderCharts(){
       }
     });
   }
+}
+
+// ── RENDER SALA DE ESPERA ─────────────────────────────────────
+function renderEspera(){
+  const data = (activeFilter==='Todos' ? [...records] : records.filter(r=>r.turno===activeFilter))
+    .sort((a,b)=>sortKey(a)-sortKey(b));
+
+  const el = document.getElementById('esp-stats');
+  if(!el) return;
+
+  if(!data.length){
+    el.innerHTML = '<p class="empty" style="grid-column:1/-1">Sin datos para el turno seleccionado.</p>';
+    ['ch-esp-total','ch-esp-tmax','ch-esp-ambulancias','ch-esp-esi','ch-esp-especialidad']
+      .forEach(id=>{ if(charts[id]){ charts[id].destroy(); delete charts[id]; } });
+    return;
+  }
+
+  const latest = data[data.length-1];
+  const esp    = num(latest.espera);
+  const tmax   = num(latest.tmax_espera);
+  const amb    = num(latest.ambulancias_espera);
+  const crit   = num(latest.esi1_esp_n) + num(latest.esi2_esp_n);
+
+  const colEsp  = esp  > 20 ? 'var(--red)'   : esp  > 10 ? 'var(--amber)' : 'var(--green)';
+  const colTmax = tmax > 4  ? 'var(--red)'   : tmax > 2  ? 'var(--amber)' : 'var(--green)';
+  const colAmb  = amb  > 2  ? 'var(--red)'   : amb  > 0  ? 'var(--amber)' : 'var(--green)';
+  const colCrit = crit > 3  ? 'var(--red)'   : crit > 1  ? 'var(--amber)' : 'var(--green)';
+
+  el.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-card-value" style="color:${colEsp}">${esp}</div>
+      <div class="stat-card-label">En espera</div>
+      <div class="stat-card-sub">pacientes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value" style="color:${colTmax}">${tmax}h</div>
+      <div class="stat-card-label">T.máx espera</div>
+      <div class="stat-card-sub">horas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value" style="color:${colAmb}">${amb}</div>
+      <div class="stat-card-label">Ambulancias</div>
+      <div class="stat-card-sub">en espera</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value" style="color:${colCrit}">${crit}</div>
+      <div class="stat-card-label">ESI 1+2</div>
+      <div class="stat-card-sub">críticos en espera</div>
+    </div>`;
+
+  const labels = data.map(shortLabel);
+
+  makeLineChart('ch-esp-total',       'Espera',       '#dc2626', data.map(r=>num(r.espera)),              labels);
+  makeLineChart('ch-esp-tmax',        'T.máx espera', '#b45309', data.map(r=>num(r.tmax_espera)),         labels);
+  makeLineChart('ch-esp-ambulancias', 'Ambulancias',  '#1d4ed8', data.map(r=>num(r.ambulancias_espera)),  labels);
+
+  makeMultiLineChart('ch-esp-esi', [
+    ds('ESI 1',  '#b91c1c', data.map(r=>num(r.esi1_esp_n))),
+    ds('ESI 2',  '#c2410c', data.map(r=>num(r.esi2_esp_n))),
+    ds('ESI 3',  '#b45309', data.map(r=>num(r.esi3_esp_n))),
+    ds('ESI 4/5','#15803d', data.map(r=>num(r.esi45_esp_n)))
+  ], labels, 'Pacientes en espera');
+
+  makeMultiLineChart('ch-esp-especialidad', [
+    ds('Medicina', '#1d4ed8', data.map(r=>num(r.med_espera))),
+    ds('Cirugía',  '#7c3aed', data.map(r=>num(r.cir_espera))),
+    ds('TMT',      '#b45309', data.map(r=>num(r.tmt_espera)))
+  ], labels, 'Pacientes en espera por especialidad');
+}
+
+// ── RENDER EN ATENCIÓN ────────────────────────────────────────
+function renderAtencion(){
+  const data = (activeFilter==='Todos' ? [...records] : records.filter(r=>r.turno===activeFilter))
+    .sort((a,b)=>sortKey(a)-sortKey(b));
+
+  const el = document.getElementById('aten-stats');
+  if(!el) return;
+
+  if(!data.length){
+    el.innerHTML = '<p class="empty" style="grid-column:1/-1">Sin datos para el turno seleccionado.</p>';
+    ['ch-aten-total','ch-aten-box','ch-aten-pct','ch-aten-esi','ch-aten-tmax']
+      .forEach(id=>{ if(charts[id]){ charts[id].destroy(); delete charts[id]; } });
+    return;
+  }
+
+  const latest = data[data.length-1];
+  const aten = num(latest.atencion);
+  const blt  = num(latest.box_lt360);
+  const bgt  = num(latest.box_gt360);
+  const pct  = aten > 0 ? (bgt / aten) * 100 : 0;
+
+  const colAten = 'var(--blue)';
+  const colBlt  = 'var(--green)';
+  const colBgt  = bgt > 5 ? 'var(--red)' : bgt > 2 ? 'var(--amber)' : 'var(--green)';
+  const colPct  = pct < 10 ? 'var(--green)' : pct < 20 ? 'var(--amber)' : 'var(--red)';
+
+  el.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-card-value" style="color:${colAten}">${aten}</div>
+      <div class="stat-card-label">En atención</div>
+      <div class="stat-card-sub">ambulatorio</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value" style="color:${colBlt}">${blt}</div>
+      <div class="stat-card-label">Box &lt; 6h</div>
+      <div class="stat-card-sub">pacientes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value" style="color:${colBgt}">${bgt}</div>
+      <div class="stat-card-label">Box &gt; 6h</div>
+      <div class="stat-card-sub">pacientes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value" style="color:${colPct}">${pct.toFixed(1)}%</div>
+      <div class="stat-card-label">% Box &gt; 6h</div>
+      <div class="stat-card-sub">del total en atención</div>
+    </div>`;
+
+  const labels = data.map(shortLabel);
+
+  makeLineChart('ch-aten-total', 'Atención',  '#1d4ed8', data.map(r=>num(r.atencion)), labels);
+  makeLineChart('ch-aten-pct',   '% Box>6h', '#7c3aed', data.map(r=>{
+    const a=num(r.atencion); const b=num(r.box_gt360);
+    return a>0?(b/a)*100:0;
+  }), labels, 30, 'percent');
+
+  // tmax_atencion: parse "4h30m" → decimal hours
+  makeLineChart('ch-aten-tmax', 'T.máx aten.', '#b45309', data.map(r=>{
+    const s = String(r.tmax_atencion||'0');
+    const mh = s.match(/(\d+)h/); const mm = s.match(/(\d+)m/);
+    return (mh?parseInt(mh[1]):0) + (mm?parseInt(mm[1])/60:0);
+  }), labels);
+
+  makeMultiLineChart('ch-aten-box', [
+    ds('Box < 6h', '#15803d', data.map(r=>num(r.box_lt360))),
+    ds('Box > 6h', '#dc2626', data.map(r=>num(r.box_gt360)))
+  ], labels, 'Pacientes en box');
+
+  makeMultiLineChart('ch-aten-esi', [
+    ds('ESI 1',  '#b91c1c', data.map(r=>num(r.esi1_aten_n))),
+    ds('ESI 2',  '#c2410c', data.map(r=>num(r.esi2_aten_n))),
+    ds('ESI 3',  '#b45309', data.map(r=>num(r.esi3_aten_n))),
+    ds('ESI 4/5','#15803d', data.map(r=>num(r.esi45_aten_n)))
+  ], labels, 'Pacientes en atención');
 }
 
 // ── EVENT HANDLERS ────────────────────────────────────────────
@@ -882,7 +1137,7 @@ async function exportCharts(){
   ctx.font='11px "IBM Plex Mono",monospace';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-  ctx.fillText('Dashboard UEH v1.1 · Hospital San José · '+stamp, W/2, H-FOOTER/2);
+  ctx.fillText('Dashboard UEH v1.2 · Hospital San José · '+stamp, W/2, H-FOOTER/2);
 
   const link=document.createElement('a');
   link.download='UEH_graficos_'+activeFilter+'_'+stamp.replace(/[/:,\s]+/g,'-')+'.jpg';
