@@ -140,6 +140,25 @@ footer small{color:var(--fg-3);font-size:11px}
 /* ── EMPTY STATE ── */
 .empty{text-align:center;padding:40px;color:var(--fg-3);font-size:13px;font-style:italic}
 
+/* ── DATE RANGE FILTER ── */
+.date-filter{display:flex;gap:var(--sp-sm);align-items:center;flex-wrap:wrap;background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:var(--r-lg);padding:14px var(--sp-md);box-shadow:var(--sh-sm);margin-bottom:var(--sp-md)}
+.date-filter label{font-size:12px;font-weight:600;color:var(--fg-2);white-space:nowrap}
+.date-filter input[type=date]{border:1px solid var(--border-default);border-radius:var(--r-sm);padding:6px 10px;font-family:var(--font-ui);font-size:12px;color:var(--fg-1);background:var(--surface-sunken);transition:border var(--t-fast)}
+.date-filter input[type=date]:focus{outline:none;border-color:var(--pal-blue);box-shadow:var(--sh-focus)}
+.date-filter-info{margin-left:auto;font-size:11px;color:var(--fg-3);white-space:nowrap}
+
+/* ── SUMMARY TABLE ── */
+.summary-table thead th{font-size:10px;text-align:center;padding:8px 10px}
+.summary-table thead th.th-group{color:#fff;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.summary-table thead th.th-sub{background:var(--surface-sunken);color:var(--fg-3);font-weight:600;letter-spacing:.1em;font-size:9px}
+.summary-table td{text-align:center;padding:8px 10px;font-size:12px}
+.summary-table td.td-turno{text-align:center}
+.summary-table td.stat-avg{font-weight:700;color:var(--fg-1);background:rgba(26,58,107,.04)}
+.summary-table td.stat-dim{color:var(--fg-3)}
+.summary-table tbody tr.row-total{background:var(--surface-sunken);border-top:2px solid var(--border-default)}
+.summary-table tbody tr.row-total td{font-weight:600}
+.kpi-green{color:var(--state-success-fg)} .kpi-amber{color:var(--state-warning-fg)} .kpi-red{color:var(--state-danger-fg)}
+
 /* ── RESPONSIVE ── */
 @media(max-width:900px){
   .capture-grid{grid-template-columns:1fr}
@@ -171,6 +190,7 @@ footer small{color:var(--fg-3);font-size:11px}
 <div class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('capture',this)">Captura</button>
   <button class="tab-btn" onclick="switchTab('graficos',this)">Indicadores</button>
+  <button class="tab-btn" onclick="switchTab('resumen',this)">Resumen</button>
 </div>
 
 <!-- MAIN -->
@@ -224,6 +244,25 @@ footer small{color:var(--fg-3);font-size:11px}
     </div>
   </section>
 
+  <!-- TAB: RESUMEN -->
+  <section id="tab-resumen" class="tab-panel">
+    <!-- Filtro de fechas -->
+    <div class="date-filter">
+      <span style="font-family:var(--font-display);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:var(--fg-2)">📅 Período</span>
+      <label for="df-from">Desde</label>
+      <input type="date" id="df-from" onchange="renderResumen()">
+      <label for="df-to">Hasta</label>
+      <input type="date" id="df-to" onchange="renderResumen()">
+      <button class="btn-export" onclick="clearDateFilter()">Limpiar</button>
+      <span class="date-filter-info" id="resumen-date-info">—</span>
+    </div>
+    <!-- Tabla resumen -->
+    <div class="card">
+      <div class="card-title">Comparación por Turno</div>
+      <div id="resumen-table"><p class="empty">Cargando datos…</p></div>
+    </div>
+  </section>
+
 </main>
 
 <!-- FOOTER -->
@@ -268,6 +307,7 @@ function switchTab(id, btn){
   document.getElementById('tab-'+id).classList.add('active');
   btn.classList.add('active');
   if(id==='graficos') renderCharts();
+  if(id==='resumen')  renderResumen();
 }
 
 // ── FILTER ────────────────────────────────────────────────────
@@ -923,6 +963,158 @@ async function exportCharts(){
   link.download='UEH_graficos_'+activeFilter+'_'+stamp.replace(/[/:,\s]+/g,'-')+'.jpg';
   link.href=cvs.toDataURL('image/jpeg',0.93);
   link.click();
+}
+
+// ── RESUMEN POR TURNO ─────────────────────────────────────────
+function parseRecordDate(str){
+  const p = String(str||'').split(/[-\/]/);
+  if(p.length < 3) return null;
+  const dd = parseInt(p[0]), mm = parseInt(p[1]), yyyy = parseInt(p[2]);
+  if(!dd||!mm||!yyyy) return null;
+  return new Date(yyyy, mm-1, dd);
+}
+
+function clearDateFilter(){
+  document.getElementById('df-from').value = '';
+  document.getElementById('df-to').value   = '';
+  renderResumen();
+}
+
+function getFilteredForResumen(){
+  const fromVal = document.getElementById('df-from')?.value || '';
+  const toVal   = document.getElementById('df-to')?.value   || '';
+  if(!fromVal && !toVal) return records;
+  return records.filter(r => {
+    const d = parseRecordDate(r.fecha);
+    if(!d) return true;
+    if(fromVal){
+      const [yf,mf,df] = fromVal.split('-').map(Number);
+      if(d < new Date(yf, mf-1, df)) return false;
+    }
+    if(toVal){
+      const [yt,mt,dt] = toVal.split('-').map(Number);
+      if(d > new Date(yt, mt-1, dt)) return false;
+    }
+    return true;
+  });
+}
+
+function calcStats(arr){
+  const vals = arr.map(v => num(v));
+  if(!vals.length) return null;
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const avg = vals.reduce((a,b) => a+b, 0) / vals.length;
+  return { min, max, avg };
+}
+
+function tdStats(s, decimals){
+  const d = decimals !== undefined ? decimals : 1;
+  if(s === null) return `<td class="stat-dim">—</td><td class="stat-avg">—</td><td class="stat-dim">—</td>`;
+  return `<td class="stat-dim mono">${s.min.toFixed(d)}</td><td class="stat-avg mono">${s.avg.toFixed(d)}</td><td class="stat-dim mono">${s.max.toFixed(d)}</td>`;
+}
+
+function tdPct(s){
+  if(s === null) return `<td class="stat-dim">—</td><td class="stat-avg">—</td><td class="stat-dim">—</td>`;
+  const avgCls = s.avg < 10 ? 'kpi-green' : s.avg < 20 ? 'kpi-amber' : 'kpi-red';
+  return `<td class="stat-dim mono">${s.min.toFixed(1)}%</td><td class="stat-avg mono ${avgCls}">${s.avg.toFixed(1)}%</td><td class="stat-dim mono">${s.max.toFixed(1)}%</td>`;
+}
+
+function renderResumen(){
+  const filtered = getFilteredForResumen();
+  const n        = filtered.length;
+  const fromVal  = document.getElementById('df-from')?.value || '';
+  const toVal    = document.getElementById('df-to')?.value   || '';
+
+  // Info de período
+  const infoEl = document.getElementById('resumen-date-info');
+  if(infoEl){
+    if(fromVal || toVal){
+      const fmtDate = v => v ? v.split('-').reverse().join('/') : '…';
+      infoEl.innerHTML = `${fmtDate(fromVal)} → ${fmtDate(toVal)} &nbsp;·&nbsp; <strong>${n}</strong> registros`;
+    } else {
+      infoEl.innerHTML = `Todos los registros &nbsp;·&nbsp; <strong>${n}</strong> observaciones`;
+    }
+  }
+
+  const tEl = document.getElementById('resumen-table');
+  if(!tEl) return;
+
+  if(!n){
+    tEl.innerHTML = '<p class="empty">Sin datos para el período seleccionado.</p>';
+    return;
+  }
+
+  const turnos = ['A','B','C','D'];
+
+  const bodyRows = turnos.map(t => {
+    const tr = filtered.filter(r => r.turno === t);
+    const cnt = tr.length;
+    if(!cnt){
+      const dashes = Array(12).fill('<td class="stat-dim">—</td>').join('');
+      return `<tr>
+        <td class="td-turno"><span class="badge badge-blue">${t}</span></td>
+        <td class="mono" style="text-align:center;color:var(--fg-3)">0</td>
+        ${dashes}
+      </tr>`;
+    }
+    const sAten = calcStats(tr.map(r => r.atencion));
+    const sEsp  = calcStats(tr.map(r => r.espera));
+    const sHosp = calcStats(tr.map(r => r.hosp));
+    const sPct  = calcStats(tr.map(r => calcKPIs(r).pct_box));
+    return `<tr>
+      <td class="td-turno"><span class="badge badge-blue">${t}</span></td>
+      <td class="mono" style="text-align:center;font-weight:700">${cnt}</td>
+      ${tdStats(sAten, 0)}
+      ${tdStats(sEsp,  0)}
+      ${tdStats(sHosp, 0)}
+      ${tdPct(sPct)}
+    </tr>`;
+  }).join('');
+
+  // Fila total
+  const sAtenT = calcStats(filtered.map(r => r.atencion));
+  const sEspT  = calcStats(filtered.map(r => r.espera));
+  const sHospT = calcStats(filtered.map(r => r.hosp));
+  const sPctT  = calcStats(filtered.map(r => calcKPIs(r).pct_box));
+  const totalRow = `<tr class="row-total">
+    <td class="td-turno"><span class="badge badge-solid">Todos</span></td>
+    <td class="mono" style="text-align:center;font-weight:700">${n}</td>
+    ${tdStats(sAtenT, 0)}
+    ${tdStats(sEspT,  0)}
+    ${tdStats(sHospT, 0)}
+    ${tdPct(sPctT)}
+  </tr>`;
+
+  tEl.innerHTML = `
+    <div class="table-wrap">
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th rowspan="2" style="text-align:center;vertical-align:middle">Turno</th>
+          <th rowspan="2" style="text-align:center;vertical-align:middle">N° obs</th>
+          <th colspan="3" class="th-group" style="background:var(--pal-blue)">En Atención</th>
+          <th colspan="3" class="th-group" style="background:var(--accent-red)">En Espera</th>
+          <th colspan="3" class="th-group" style="background:var(--state-warning-fg)">Boarding</th>
+          <th colspan="3" class="th-group" style="background:var(--accent-purple)">% &gt; 6 hrs</th>
+        </tr>
+        <tr>
+          <th class="th-sub">Mín</th><th class="th-sub">Prom</th><th class="th-sub">Máx</th>
+          <th class="th-sub">Mín</th><th class="th-sub">Prom</th><th class="th-sub">Máx</th>
+          <th class="th-sub">Mín</th><th class="th-sub">Prom</th><th class="th-sub">Máx</th>
+          <th class="th-sub">Mín</th><th class="th-sub">Prom</th><th class="th-sub">Máx</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${bodyRows}
+        ${totalRow}
+      </tbody>
+    </table>
+    </div>
+    <p style="margin-top:var(--sp-sm);font-size:11px;color:var(--fg-3)">
+      <strong>Prom</strong> = promedio del período · <strong>Mín / Máx</strong> = valor extremo observado ·
+      <span class="kpi-green">■</span> &lt;10% &nbsp; <span class="kpi-amber">■</span> 10–20% &nbsp; <span class="kpi-red">■</span> &gt;20%
+    </p>`;
 }
 
 // ── INIT ──────────────────────────────────────────────────────
